@@ -1,0 +1,61 @@
+# Helm values for Prometheus
+grafana:
+  enabled: true
+  adminPassword: "admin"  # Change in production
+  service:
+    type: ClusterIP
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: default
+          orgId: 1
+          folder: ""
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+  dashboardsConfigMaps:
+    default: ml-model-dashboard
+
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelector:
+      matchLabels:
+        team: mlops
+    resources:
+      requests:
+        memory: "400Mi"
+        cpu: "200m"
+
+alertmanager:
+  config:
+    global:
+      resolve_timeout: 5m
+      slack_api_url: "<SLACK_WEBHOOK_URL>"  # Replace with actual
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 1h
+      receiver: 'slack-notifications'
+    receivers:
+      - name: 'slack-notifications'
+        slack_configs:
+          - channel: '#alerts'
+            send_resolved: true
+            text: "{{ .CommonAnnotations.summary }}"
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
